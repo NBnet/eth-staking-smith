@@ -1,8 +1,12 @@
 use crate::staking::staking;
 use crate::{key_material::KdfVariant, networks::SupportedNetworks, Validators};
 use clap::{arg, Parser};
+use serde_derive::Deserialize;
+use serde_with::{serde_as, NoneAsEmptyString};
+use std::fs::read_to_string;
 
-#[derive(Clone, Parser)]
+#[serde_as]
+#[derive(Clone, Parser, Deserialize, Debug)]
 pub struct ExistingMnemonicSubcommandOpts {
     /// The mnemonic that you used to generate your
     /// keys.
@@ -19,6 +23,7 @@ pub struct ExistingMnemonicSubcommandOpts {
     /// Use "mainnet" if you are
     /// depositing ETH
     #[arg(value_enum, long)]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub chain: Option<SupportedNetworks>,
 
     /// The number of new validator keys you want to
@@ -61,10 +66,12 @@ pub struct ExistingMnemonicSubcommandOpts {
     /// and consequently slower performance vs `pbkdf2`,
     /// achieving better performance with lower security parameters compared to `scrypt`
     #[arg(long)]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub kdf: Option<KdfVariant>,
 
     /// Path to a custom Eth PoS chain config
     #[arg(long, visible_alias = "testnet_config")]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub testnet_config: Option<String>,
 
     /// A version of CLI to include into generated deposit data
@@ -80,35 +87,42 @@ pub struct ExistingMnemonicSubcommandOpts {
 
 impl ExistingMnemonicSubcommandOpts {
     pub fn run(&self) {
-        let chain = if self.chain.is_some() && self.testnet_config.is_some() {
+        let mut opt = self.clone();
+
+        if let Ok(config_path) = std::env::var("existing_mnemonic_config") {
+            let str = read_to_string(config_path).unwrap();
+            opt = toml::from_str(&str).unwrap();
+        }
+
+        let chain = if opt.chain.is_some() && opt.testnet_config.is_some() {
             panic!("should only pass one of testnet_config or chain")
-        } else if self.testnet_config.is_some() {
+        } else if opt.testnet_config.is_some() {
             // Signalizes custom testnet config will be used
             None
         } else {
-            self.chain.clone()
+            opt.chain.clone()
         };
 
-        let password = self
+        let password = opt
             .keystore_password
             .clone()
             .map(|p| p.as_bytes().to_owned());
 
         let validators = Validators::new(
-            Some(self.mnemonic.as_bytes()),
+            Some(opt.mnemonic.as_bytes()),
             password,
-            Some(self.num_validators),
-            self.validator_start_index,
-            self.withdrawal_credentials.is_none(),
-            self.kdf.clone(),
+            Some(opt.num_validators),
+            opt.validator_start_index,
+            opt.withdrawal_credentials.is_none(),
+            opt.kdf.clone(),
         );
         let export = validators
             .export(
                 chain,
-                self.withdrawal_credentials.clone(),
+                opt.withdrawal_credentials.clone(),
                 32_000_000_000,
-                self.deposit_cli_version.clone(),
-                self.testnet_config.clone(),
+                opt.deposit_cli_version.clone(),
+                opt.testnet_config.clone(),
             )
             .unwrap();
         let export_json: serde_json::Value = export
@@ -119,15 +133,15 @@ impl ExistingMnemonicSubcommandOpts {
             serde_json::to_string_pretty(&export_json).expect("could not parse validator export");
         println!("{}", export_json);
 
-        if self.from_path.is_some() && self.staking_rpc.is_some() {
+        if opt.from_path.is_some() && opt.staking_rpc.is_some() {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .unwrap();
             rt.block_on(async move {
-                let rpc = self.staking_rpc.as_ref().unwrap();
-                let from_path = self.from_path.as_ref().unwrap();
-                let network = self.chain.as_ref().unwrap();
+                let rpc = opt.staking_rpc.as_ref().unwrap();
+                let from_path = opt.from_path.as_ref().unwrap();
+                let network = opt.chain.as_ref().unwrap();
 
                 if let Err(e) = staking(&rpc, network, &export, &from_path).await {
                     eprintln!("staking err {e:?}");

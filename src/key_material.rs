@@ -4,6 +4,9 @@ use eth2_keystore::{
     json_keystore::Kdf, keypair_from_secret, Keystore, KeystoreBuilder, PlainText,
 };
 use eth2_wallet::{KeyType, ValidatorPath};
+use serde_derive::Deserialize;
+use serde_with::serde_as;
+use std::str::FromStr;
 use types::{Keypair, SecretKey};
 
 use crate::utils::{pbkdf2, scrypt};
@@ -34,10 +37,23 @@ impl VotingKeyMaterial {
 }
 
 /// Key derivation function for the keystore
-#[derive(clap::ValueEnum, Clone)]
+#[serde_as]
+#[derive(clap::ValueEnum, Clone, Deserialize, Debug)]
 pub enum KdfVariant {
     Scrypt,
     Pbkdf2,
+}
+
+impl FromStr for KdfVariant {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "scrypt" => Ok(Self::Scrypt),
+            "pbkdf2" => Ok(Self::Pbkdf2),
+            _ => Err(format!("Unknown kdf variant: {}", s)),
+        }
+    }
 }
 
 impl From<KdfVariant> for Kdf {

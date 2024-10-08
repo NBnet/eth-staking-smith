@@ -1,16 +1,33 @@
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
+use serde_derive::Deserialize;
+use serde_with::serde_as;
 use std::collections::HashMap;
 use std::str::FromStr;
 use types::{Address, Hash256};
 
-#[derive(clap::ValueEnum, Clone, Hash, Eq, PartialEq)]
+#[serde_as]
+#[derive(clap::ValueEnum, Clone, Hash, Eq, PartialEq, Deserialize, Debug)]
 pub enum SupportedNetworks {
     Mainnet,
     Holesky,
     // These are legacy networks they are supported on best effort basis
     Prater,
     Goerli,
+}
+
+impl FromStr for SupportedNetworks {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "mainnet" => Ok(SupportedNetworks::Mainnet),
+            "holesky" => Ok(SupportedNetworks::Holesky),
+            "goerli" => Ok(SupportedNetworks::Goerli),
+            "prater" => Ok(SupportedNetworks::Goerli),
+            _ => Err(format!("{} is not a supported SupportedNetworks", s)),
+        }
+    }
 }
 
 impl std::fmt::Display for SupportedNetworks {

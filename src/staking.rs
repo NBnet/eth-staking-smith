@@ -1,7 +1,7 @@
 use crate::networks::SupportedNetworks;
 use crate::ValidatorExports;
 use anyhow::{anyhow, Result};
-use bip32::{PrivateKey, PublicKey};
+use bip32::PrivateKey;
 use ethers::abi::{Contract, Function, Token};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::middleware::Middleware;
