@@ -1,3 +1,4 @@
+use crate::staking::staking;
 use crate::{key_material::KdfVariant, networks::SupportedNetworks, Validators};
 use clap::{arg, Parser};
 
@@ -59,6 +60,12 @@ pub struct NewMnemonicSubcommandOpts {
     /// A version of CLI to include into generated deposit data
     #[arg(long, visible_alias = "deposit_cli_version", default_value = "2.7.0")]
     pub deposit_cli_version: String,
+
+    #[arg(long)]
+    pub staking_rpc: Option<String>,
+
+    #[arg(long)]
+    pub from_path: Option<String>,
 }
 
 impl NewMnemonicSubcommandOpts {
@@ -85,7 +92,7 @@ impl NewMnemonicSubcommandOpts {
             self.withdrawal_credentials.is_none(),
             self.kdf.clone(),
         );
-        let export: serde_json::Value = validators
+        let export = validators
             .export(
                 chain,
                 self.withdrawal_credentials.clone(),
@@ -93,11 +100,29 @@ impl NewMnemonicSubcommandOpts {
                 self.deposit_cli_version.clone(),
                 self.testnet_config.clone(),
             )
-            .unwrap()
+            .unwrap();
+        let export_json: serde_json::Value = export
+            .clone()
             .try_into()
             .expect("could not serialise validator export");
         let export_json =
-            serde_json::to_string_pretty(&export).expect("could not parse validator export");
+            serde_json::to_string_pretty(&export_json).expect("could not parse validator export");
         println!("{}", export_json);
+
+        if self.from_path.is_some() && self.staking_rpc.is_some() {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(async move {
+                let rpc = self.staking_rpc.as_ref().unwrap();
+                let from_path = self.from_path.as_ref().unwrap();
+                let network = self.chain.as_ref().unwrap();
+
+                if let Err(e) = staking(&rpc, network, &export, &from_path).await {
+                    eprintln!("staking err {e:?}");
+                }
+            });
+        }
     }
 }

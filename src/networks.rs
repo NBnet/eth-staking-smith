@@ -1,7 +1,8 @@
-use std::collections::HashMap;
-
+use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
-use types::Hash256;
+use std::collections::HashMap;
+use std::str::FromStr;
+use types::{Address, Hash256};
 
 #[derive(clap::ValueEnum, Clone, Hash, Eq, PartialEq)]
 pub enum SupportedNetworks {
@@ -21,6 +22,29 @@ impl std::fmt::Display for SupportedNetworks {
             SupportedNetworks::Goerli => "goerli",
         };
         write!(f, "{}", s)
+    }
+}
+
+impl SupportedNetworks {
+    pub fn chain_id(&self) -> u64 {
+        match self {
+            SupportedNetworks::Mainnet => 1,
+            SupportedNetworks::Holesky => 17000,
+            SupportedNetworks::Prater => 5,
+            SupportedNetworks::Goerli => 5,
+        }
+    }
+
+    pub fn staking_address(&self) -> Result<Address> {
+        let address_str = match self {
+            SupportedNetworks::Mainnet => "0x00000000219ab540356cBB839Cbe05303d7705Fa".to_string(),
+            SupportedNetworks::Holesky => "0x4242424242424242424242424242424242424242".to_string(),
+            SupportedNetworks::Prater => return Err(anyhow!("not support prater")),
+            SupportedNetworks::Goerli => return Err(anyhow!("not support goerli")),
+        };
+
+        let address = Address::from_str(&address_str)?;
+        Ok(address)
     }
 }
 

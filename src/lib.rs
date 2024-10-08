@@ -7,6 +7,7 @@ pub(crate) mod deposit;
 pub(crate) mod key_material;
 pub mod networks;
 pub(crate) mod seed;
+pub mod staking;
 pub mod utils;
 pub mod validators;
 pub mod voluntary_exit;
