@@ -11,6 +11,7 @@ use ethers::types::transaction::eip2718::TypedTransaction;
 use ethers::types::{Address, Bytes, TransactionRequest};
 use ethers::utils::keccak256;
 use once_cell::sync::Lazy;
+use std::str::FromStr;
 use std::time::Duration;
 
 // this abi from:
@@ -127,24 +128,29 @@ pub async fn staking(
     network: &SupportedNetworks,
     validator_exports: &ValidatorExports,
     from_path: &str,
+    staking_address: Option<String>,
 ) -> Result<()> {
     println!("staking start...");
+
+    // get to address
+    let to = if network == &SupportedNetworks::Custom {
+        if staking_address.is_none() {
+            return Err(anyhow!(
+                "When using a custom network, you must specify a staking address"
+            ));
+        }
+
+        let staking_address_str = staking_address.unwrap();
+        Address::from_str(&staking_address_str)?
+    } else {
+        network.staking_address()?
+    };
 
     // - gen cli
     let provider = Provider::<Http>::connect(rpc).await;
 
-    // - check rpc and network is match
-    {
-        let rpc_chain_id = provider.get_chainid().await?;
-
-        if rpc_chain_id.as_u64() != network.chain_id() {
-            return Err(anyhow!(
-                "rpc_chain_id is not the same as chain_id, {}:{}",
-                rpc_chain_id.as_u64(),
-                network.chain_id()
-            ));
-        }
-    }
+    // get chain id
+    let chain_id = provider.get_chainid().await?;
 
     // - get private key
     let (wallet, from) = {
@@ -164,7 +170,7 @@ pub async fn staking(
             public_key.to_encoded_point(false).as_bytes(),
         ));
 
-        let wallet = LocalWallet::from(private_key).with_chain_id(network.chain_id());
+        let wallet = LocalWallet::from(private_key).with_chain_id(chain_id.as_u64());
 
         (wallet, address)
     };
@@ -189,7 +195,7 @@ pub async fn staking(
     let tx_bytes = {
         let mut tx = TransactionRequest {
             from: Some(from),
-            to: Some(network.staking_address()?.into()),
+            to: Some(to.into()),
             gas: None,
             gas_price: None,
             value: None,

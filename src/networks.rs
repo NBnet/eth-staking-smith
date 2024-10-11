@@ -14,6 +14,7 @@ pub enum SupportedNetworks {
     // These are legacy networks they are supported on best effort basis
     Prater,
     Goerli,
+    Custom,
 }
 
 impl FromStr for SupportedNetworks {
@@ -25,6 +26,7 @@ impl FromStr for SupportedNetworks {
             "holesky" => Ok(SupportedNetworks::Holesky),
             "goerli" => Ok(SupportedNetworks::Goerli),
             "prater" => Ok(SupportedNetworks::Goerli),
+            "custom" => Ok(SupportedNetworks::Custom),
             _ => Err(format!("{} is not a supported SupportedNetworks", s)),
         }
     }
@@ -37,6 +39,7 @@ impl std::fmt::Display for SupportedNetworks {
             SupportedNetworks::Holesky => "holesky",
             SupportedNetworks::Prater => "goerli",
             SupportedNetworks::Goerli => "goerli",
+            SupportedNetworks::Custom => "custom",
         };
         write!(f, "{}", s)
     }
@@ -49,6 +52,7 @@ impl SupportedNetworks {
             SupportedNetworks::Holesky => 17000,
             SupportedNetworks::Prater => 5,
             SupportedNetworks::Goerli => 5,
+            SupportedNetworks::Custom => 0,
         }
     }
 
@@ -58,6 +62,7 @@ impl SupportedNetworks {
             SupportedNetworks::Holesky => "0x4242424242424242424242424242424242424242".to_string(),
             SupportedNetworks::Prater => return Err(anyhow!("not support prater")),
             SupportedNetworks::Goerli => return Err(anyhow!("not support goerli")),
+            SupportedNetworks::Custom => "0x0000000000000000000000000000000000000000".to_string(),
         };
 
         let address = Address::from_str(&address_str)?;

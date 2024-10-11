@@ -90,7 +90,7 @@ export new_mnemonic_config="./eth-staking-smit/config/existing_mnemonic.toml"
 
 ## 自定义网络
 
-### 以后会添加的功能  
-- [ ] 输入自定义合约地址
-- [ ] 输入自定义交易的data hex
-- [ ] 等等
+默认自定义网络使用的合约和eth的标准质押合约是一样的, 如果不一样则无法使用
+
+新增字段`--staking-address`, 配合`chain == custom`的时候使用
+

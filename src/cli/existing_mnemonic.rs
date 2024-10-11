@@ -83,6 +83,10 @@ pub struct ExistingMnemonicSubcommandOpts {
 
     #[arg(long)]
     pub from_path: Option<String>,
+
+    #[arg(long)]
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub staking_address: Option<String>,
 }
 
 impl ExistingMnemonicSubcommandOpts {
@@ -143,7 +147,9 @@ impl ExistingMnemonicSubcommandOpts {
                 let from_path = opt.from_path.as_ref().unwrap();
                 let network = opt.chain.as_ref().unwrap();
 
-                if let Err(e) = staking(&rpc, network, &export, &from_path).await {
+                if let Err(e) =
+                    staking(&rpc, network, &export, &from_path, opt.staking_address).await
+                {
                     eprintln!("staking err {e:?}");
                 }
             });
