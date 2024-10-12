@@ -7,7 +7,7 @@
 
 `--withdrawal-credentials`: 提取地址,可以指定也可以不写,自动派生  
 `--num_validators`: 根据一个助记词生成X个validator信息,密码都是相同的 `--keystore_password`  
-`--output`: 输出validator相关信息的文件夹路径,如下所示的结构,默认输出路径`./`   
+`--output`: 输出validator相关信息的文件夹路径,如下所示的结构,默认输出路径`./`
 ```
 cd ./validators
 -rw-rw-r-- 1 cloud cloud 2120 10月 12 16:16 export.json
@@ -67,4 +67,9 @@ export staking_config="./eth-staking-smit/config/staking.toml"
 默认自定义网络使用的合约和eth的标准质押合约是一样的, 如果不一样则无法使用
 
 新增字段`--staking-address`, 配合`chain == custom`的时候使用
+
+## 配合lighthouse使用
+1. 使用`new-mnemonic`之后,会输出对应信息到指定文件夹`./validators/`
+2. 使用lighthouse导入 `./lighthouse --network holesky account validator import --directory ./validators`
+3. 输入密码就是使用`new-mnemonic`指定的`--keystore_password`
 
