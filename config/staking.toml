@@ -1,0 +1,10 @@
+# The name of Ethereum PoS chain you are targeting [possible values: Mainnet, Holesky, Prater, Goerli, Custom]
+chain = "Holesky"
+
+rpc = "https://ethereum-holesky-rpc.publicnode.com"
+
+from_path = "./sk"
+
+staking_address = ""
+
+export_path = "./validators/export.json"

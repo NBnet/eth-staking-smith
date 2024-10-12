@@ -26,7 +26,7 @@ pub struct Validators {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct MnemonicExport {
+pub struct MnemonicExport {
     seed: String,
 }
 
@@ -106,7 +106,7 @@ impl DepositExport {
 pub struct ValidatorExports {
     pub keystores: Vec<Keystore>,
     pub private_keys: Vec<String>,
-    mnemonic: MnemonicExport,
+    pub mnemonic: MnemonicExport,
     pub deposit_data: Vec<DepositExport>,
 }
 

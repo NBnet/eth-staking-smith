@@ -5,7 +5,20 @@
 
 ### 新建key
 
-`--withdrawal-credentials`: 提取地址,可以指定也可以不写,自动派生
+`--withdrawal-credentials`: 提取地址,可以指定也可以不写,自动派生  
+`--num_validators`: 根据一个助记词生成X个validator信息,密码都是相同的 `--keystore_password`  
+`--output`: 输出validator相关信息的文件夹路径,如下所示的结构,默认输出路径`./`   
+```
+cd ./validators
+-rw-rw-r-- 1 cloud cloud 2120 10月 12 16:16 export.json
+drwxrwxr-x 2 cloud cloud 4096 10月 12 16:16 validator-0/
+
+cd validator-0/
+-rw-rw-r-- 1 cloud cloud  724 10月 12 16:16 deposit-data.json
+-rw-rw-r-- 1 cloud cloud  167 10月 12 16:16 mnemonic.json
+-rw-rw-r-- 1 cloud cloud   64 10月 12 16:16 private-key
+-rw-rw-r-- 1 cloud cloud  890 10月 12 16:16 voting-keystore.json
+```
 
 - 使用cmd指令
 ```
@@ -14,13 +27,12 @@
     --num_validators 1 \
     --chain holesky \
     --withdrawal-credentials 0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc
+    --output ./
 ```
 
 - 使用环境变量
 
-在配置文件中设置  
-`staking_rpc = ""`  
-`from_path = ""`
+在配置文件中设置
 
 ```
 export new_mnemonic_config="./eth-staking-smit/config/new_mnemonic.toml"
@@ -29,63 +41,25 @@ export new_mnemonic_config="./eth-staking-smit/config/new_mnemonic.toml"
 
 ```
 
+### 导入key(同新建key差不多)
 
+### 质押
 
-### 新建key之后进行deposit
-
-`--from-path`: 指定私钥的文件路径  
-`--staking-rpc`: 需要质押到的网络的rpc
-
-- 使用cmd指令
+- 使用cmd
 ```
-./eth-staking-smith new-mnemonic \
-    --keystore_password 11111111 \
-    --num_validators 1 \
+./eth-staking-smith staking \
     --chain holesky \
-    --withdrawal-credentials 0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc \
-    --from-path ./sk \
-    --staking-rpc https://ethereum-holesky-rpc.publicnode.com
+    --rpc "https://ethereum-holesky-rpc.publicnode.com" \
+    --from_path "./sk" \
+    --staking_address "0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc" \
+    --export_path "./validators/export.json"
 ```
 
 - 使用环境变量
-
-在配置文件中设置  
-`staking_rpc = "https://ethereum-holesky-rpc.publicnode.com"`  
-`from_path = "./{key path}"`  
-
 ```
-export new_mnemonic_config="./eth-staking-smit/config/new_mnemonic.toml"
+export staking_config="./eth-staking-smit/config/staking.toml"
 
-./eth-staking-smith new-mnemonic
-
-```
-
-
-### 导入助记词之后进行deposit
-
-- 使用cmd指令
-```
-./eth-staking-smith existing-mnemonic \
-  --mnemonic "palace parade smoke alert thought ship luggage crouch during shrug budget height fan author ask wear catch gaze half girl song tunnel fossil wasp" \
-  --keystore_password 11111111 \
-  --num_validators 1 \
-  --chain holesky \
-  --withdrawal-credentials 0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc \
-  --from-path ./sk \
-  --staking-rpc https://ethereum-holesky-rpc.publicnode.com
-```
-
-- 使用环境变量
-
-在配置文件中设置  
-`staking_rpc = "https://ethereum-holesky-rpc.publicnode.com"`  
-`from_path = "./{key path}"`
-
-```
-export new_mnemonic_config="./eth-staking-smit/config/existing_mnemonic.toml"
-
-./eth-staking-smith new-mnemonic
-
+./eth-staking-smith staking
 ```
 
 ## 自定义网络

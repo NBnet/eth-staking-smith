@@ -34,3 +34,5 @@ staking_rpc = "https://ethereum-holesky-rpc.publicnode.com"
 from_path = "./sk"
 
 staking_address = ""
+
+output = "./"
