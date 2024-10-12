@@ -68,3 +68,8 @@ export staking_config="./eth-staking-smit/config/staking.toml"
 
 新增字段`--staking-address`, 配合`chain == custom`的时候使用
 
+## 配合lighthouse使用
+1. 使用`new-mnemonic`之后,会输出对应信息到指定文件夹`./validators/`
+2. 使用lighthouse导入 `./lighthouse --network holesky account validator import --directory ./validators`
+3. 输入密码就是使用`new-mnemonic`指定的`--keystore_password`
+
