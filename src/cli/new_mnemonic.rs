@@ -1,5 +1,4 @@
-use crate::staking::staking;
-use crate::{key_material::KdfVariant, networks::SupportedNetworks, Validators};
+use crate::{key_material::KdfVariant, networks::SupportedNetworks, output, Validators};
 use clap::{arg, Parser};
 use serde_derive::Deserialize;
 use serde_with::{serde_as, NoneAsEmptyString};
@@ -68,15 +67,8 @@ pub struct NewMnemonicSubcommandOpts {
     #[arg(long, visible_alias = "deposit_cli_version", default_value = "2.7.0")]
     pub deposit_cli_version: String,
 
-    #[arg(long)]
-    pub staking_rpc: Option<String>,
-
-    #[arg(long)]
-    pub from_path: Option<String>,
-
-    #[arg(long)]
-    #[serde_as(as = "NoneAsEmptyString")]
-    pub staking_address: Option<String>,
+    #[arg(long, default_value = "./")]
+    pub output: String,
 }
 
 impl NewMnemonicSubcommandOpts {
@@ -127,22 +119,6 @@ impl NewMnemonicSubcommandOpts {
             serde_json::to_string_pretty(&export_json).expect("could not parse validator export");
         println!("{}", export_json);
 
-        if opt.from_path.is_some() && opt.staking_rpc.is_some() {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
-            rt.block_on(async move {
-                let rpc = opt.staking_rpc.as_ref().unwrap();
-                let from_path = opt.from_path.as_ref().unwrap();
-                let network = opt.chain.as_ref().unwrap();
-
-                if let Err(e) =
-                    staking(&rpc, network, &export, &from_path, opt.staking_address).await
-                {
-                    eprintln!("staking err {e:?}");
-                }
-            });
-        }
+        output::output(&export, &opt.output).unwrap();
     }
 }

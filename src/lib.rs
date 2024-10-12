@@ -6,6 +6,7 @@ pub mod cli;
 pub(crate) mod deposit;
 pub(crate) mod key_material;
 pub mod networks;
+pub mod output;
 pub(crate) mod seed;
 pub mod staking;
 pub mod utils;
