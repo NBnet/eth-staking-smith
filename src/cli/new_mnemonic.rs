@@ -1,20 +1,25 @@
-use crate::{key_material::KdfVariant, networks::SupportedNetworks, Validators};
+use crate::{key_material::KdfVariant, networks::SupportedNetworks, output, Validators};
 use clap::{arg, Parser};
+use serde_derive::Deserialize;
+use serde_with::{serde_as, NoneAsEmptyString};
+use std::fs::read_to_string;
 
-#[derive(Parser, Clone)]
+#[serde_as]
+#[derive(Parser, Clone, Deserialize, Debug)]
 pub struct NewMnemonicSubcommandOpts {
     /// The name of Ethereum PoS chain you are targeting.
     ///
     /// Use "mainnet" if you are
     /// depositing ETH
     #[arg(value_enum, long)]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub chain: Option<SupportedNetworks>,
 
     /// The number of new validator keys you want to
     /// generate.
     ///
     /// You can always generate more later
-    #[arg(long, visible_alias = "num_validators")]
+    #[arg(long, visible_alias = "num_validators", default_value_t = 0)]
     pub num_validators: u32,
 
     /// The password that will secure your keystores.
@@ -50,29 +55,41 @@ pub struct NewMnemonicSubcommandOpts {
     /// and consequently slower performance vs `pbkdf2`,
     /// achieving better performance with lower security parameters compared to `scrypt`
     #[arg(long)]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub kdf: Option<KdfVariant>,
 
     /// Path to a custom Eth PoS chain config
     #[arg(long, visible_alias = "testnet_config")]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub testnet_config: Option<String>,
 
     /// A version of CLI to include into generated deposit data
     #[arg(long, visible_alias = "deposit_cli_version", default_value = "2.7.0")]
     pub deposit_cli_version: String,
+
+    #[arg(long, default_value = "./")]
+    pub output: String,
 }
 
 impl NewMnemonicSubcommandOpts {
     pub fn run(&self) {
-        let chain = if self.chain.is_some() && self.testnet_config.is_some() {
+        let mut opt = self.clone();
+
+        if let Ok(config_path) = std::env::var("new_mnemonic_config") {
+            let str = read_to_string(config_path).unwrap();
+            opt = toml::from_str(&str).unwrap();
+        }
+
+        let chain = if opt.chain.is_some() && opt.testnet_config.is_some() {
             panic!("should only pass one of testnet_config or chain")
-        } else if self.testnet_config.is_some() {
+        } else if opt.testnet_config.is_some() {
             // Signalizes custom testnet config will be used
             None
         } else {
-            self.chain.clone()
+            opt.chain.clone()
         };
 
-        let password = self
+        let password = opt
             .keystore_password
             .clone()
             .map(|p| p.as_bytes().to_owned());
@@ -80,24 +97,28 @@ impl NewMnemonicSubcommandOpts {
         let validators = Validators::new(
             None,
             password,
-            Some(self.num_validators),
+            Some(opt.num_validators),
             None,
             self.withdrawal_credentials.is_none(),
             self.kdf.clone(),
         );
-        let export: serde_json::Value = validators
+        let export = validators
             .export(
                 chain,
-                self.withdrawal_credentials.clone(),
+                opt.withdrawal_credentials.clone(),
                 32_000_000_000,
-                self.deposit_cli_version.clone(),
-                self.testnet_config.clone(),
+                opt.deposit_cli_version.clone(),
+                opt.testnet_config.clone(),
             )
-            .unwrap()
+            .unwrap();
+        let export_json: serde_json::Value = export
+            .clone()
             .try_into()
             .expect("could not serialise validator export");
         let export_json =
-            serde_json::to_string_pretty(&export).expect("could not parse validator export");
+            serde_json::to_string_pretty(&export_json).expect("could not parse validator export");
         println!("{}", export_json);
+
+        output::output(&export, &opt.output).unwrap();
     }
 }

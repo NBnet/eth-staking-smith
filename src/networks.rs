@@ -1,15 +1,35 @@
-use std::collections::HashMap;
-
+use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
-use types::Hash256;
+use serde_derive::Deserialize;
+use serde_with::serde_as;
+use std::collections::HashMap;
+use std::str::FromStr;
+use types::{Address, Hash256};
 
-#[derive(clap::ValueEnum, Clone, Hash, Eq, PartialEq)]
+#[serde_as]
+#[derive(clap::ValueEnum, Clone, Hash, Eq, PartialEq, Deserialize, Debug)]
 pub enum SupportedNetworks {
     Mainnet,
     Holesky,
     // These are legacy networks they are supported on best effort basis
     Prater,
     Goerli,
+    Custom,
+}
+
+impl FromStr for SupportedNetworks {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "mainnet" => Ok(SupportedNetworks::Mainnet),
+            "holesky" => Ok(SupportedNetworks::Holesky),
+            "goerli" => Ok(SupportedNetworks::Goerli),
+            "prater" => Ok(SupportedNetworks::Goerli),
+            "custom" => Ok(SupportedNetworks::Custom),
+            _ => Err(format!("{} is not a supported SupportedNetworks", s)),
+        }
+    }
 }
 
 impl std::fmt::Display for SupportedNetworks {
@@ -19,8 +39,34 @@ impl std::fmt::Display for SupportedNetworks {
             SupportedNetworks::Holesky => "holesky",
             SupportedNetworks::Prater => "goerli",
             SupportedNetworks::Goerli => "goerli",
+            SupportedNetworks::Custom => "custom",
         };
         write!(f, "{}", s)
+    }
+}
+
+impl SupportedNetworks {
+    pub fn chain_id(&self) -> u64 {
+        match self {
+            SupportedNetworks::Mainnet => 1,
+            SupportedNetworks::Holesky => 17000,
+            SupportedNetworks::Prater => 5,
+            SupportedNetworks::Goerli => 5,
+            SupportedNetworks::Custom => 0,
+        }
+    }
+
+    pub fn staking_address(&self) -> Result<Address> {
+        let address_str = match self {
+            SupportedNetworks::Mainnet => "0x00000000219ab540356cBB839Cbe05303d7705Fa".to_string(),
+            SupportedNetworks::Holesky => "0x4242424242424242424242424242424242424242".to_string(),
+            SupportedNetworks::Prater => return Err(anyhow!("not support prater")),
+            SupportedNetworks::Goerli => return Err(anyhow!("not support goerli")),
+            SupportedNetworks::Custom => "0x0000000000000000000000000000000000000000".to_string(),
+        };
+
+        let address = Address::from_str(&address_str)?;
+        Ok(address)
     }
 }
 

@@ -25,8 +25,8 @@ pub struct Validators {
     key_material: Vec<VotingKeyMaterial>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct MnemonicExport {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MnemonicExport {
     seed: String,
 }
 
@@ -102,11 +102,11 @@ impl DepositExport {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ValidatorExports {
     pub keystores: Vec<Keystore>,
     pub private_keys: Vec<String>,
-    mnemonic: MnemonicExport,
+    pub mnemonic: MnemonicExport,
     pub deposit_data: Vec<DepositExport>,
 }
 
