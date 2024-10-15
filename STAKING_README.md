@@ -24,9 +24,9 @@ cd validator-0/
 ```
 ./eth-staking-smith new-mnemonic \
     --keystore_password 11111111 \
-    --num_validators 1 \
+    --num_validators 2 \
     --chain holesky \
-    --withdrawal-credentials 0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc
+    --withdrawal-credentials 0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc \
     --output ./
 ```
 
@@ -50,9 +50,8 @@ export new_mnemonic_config="./eth-staking-smit/config/new_mnemonic.toml"
 ./eth-staking-smith staking \
     --chain holesky \
     --rpc "https://ethereum-holesky-rpc.publicnode.com" \
-    --from_path "./sk" \
-    --staking_address "0x28B9FEAE1f3d76565AAdec86E7401E815377D9Cc" \
-    --export_path "./validators/export.json"
+    --from-path "./sk" \
+    --export-path "./validators/export.json"
 ```
 
 - 使用环境变量

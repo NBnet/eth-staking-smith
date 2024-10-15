@@ -175,84 +175,94 @@ pub async fn staking(
         (wallet, address)
     };
 
-    // - gen tx data
-    let tx_data = {
-        let withdrawal_credentials =
-            hex::decode(&validator_exports.deposit_data[0].withdrawal_credentials)?;
-        let signature = hex::decode(&validator_exports.deposit_data[0].signature)?;
-        let deposit_data_root = hex::decode(&validator_exports.deposit_data[0].deposit_data_root)?;
-        let pk = hex::decode(&validator_exports.deposit_data[0].pubkey)?;
+    // check amount
+    let balance = provider.get_balance(from, None).await?;
+    let staking_amount = U256::from(validator_exports.deposit_data.len()) *  U256::from_dec_str("32000000000000000000")?;
+    if balance < staking_amount {
+        return Err(anyhow!("Insufficient balance, need: {} wei, actual: {} wei", staking_amount.to_string(), balance.to_string()));
+    }
 
-        DEPOSIT_FUNC.encode_input(&[
-            Token::Bytes(pk),
-            Token::Bytes(withdrawal_credentials),
-            Token::Bytes(signature),
-            Token::FixedBytes(deposit_data_root),
-        ])?
-    };
+    for dd in &validator_exports.deposit_data {
+        // - gen tx data
+        let tx_data = {
+            let withdrawal_credentials =
+                hex::decode(&dd.withdrawal_credentials)?;
+            let signature = hex::decode(&dd.signature)?;
+            let deposit_data_root = hex::decode(&dd.deposit_data_root)?;
+            let pk = hex::decode(&dd.pubkey)?;
 
-    // - preprocessing
-    let tx_bytes = {
-        let mut tx = TransactionRequest {
-            from: Some(from),
-            to: Some(to.into()),
-            gas: None,
-            gas_price: None,
-            value: None,
-            data: Some(Bytes::from(tx_data)),
-            nonce: None,
-            chain_id: None,
+            DEPOSIT_FUNC.encode_input(&[
+                Token::Bytes(pk),
+                Token::Bytes(withdrawal_credentials),
+                Token::Bytes(signature),
+                Token::FixedBytes(deposit_data_root),
+            ])?
         };
 
-        tx.value = Some(U256::from_dec_str("32000000000000000000")?.into());
+        // - preprocessing
+        let tx_bytes = {
+            let mut tx = TransactionRequest {
+                from: Some(from),
+                to: Some(to.into()),
+                gas: None,
+                gas_price: None,
+                value: None,
+                data: Some(Bytes::from(tx_data)),
+                nonce: None,
+                chain_id: None,
+            };
 
-        let gas_price = provider.get_gas_price().await?;
-        tx.gas_price = Some(gas_price);
+            tx.value = Some(U256::from_dec_str("32000000000000000000")?.into());
 
-        let gas_limit = provider
-            .estimate_gas(&TypedTransaction::Legacy(tx.clone()), None)
-            .await?;
-        tx.gas = Some(U256::from(gas_limit));
+            let gas_price = provider.get_gas_price().await?;
+            tx.gas_price = Some(gas_price);
 
-        let nonce = provider.get_transaction_count(from, None).await?;
-        tx.nonce = Some(nonce);
+            let gas_limit = provider
+                .estimate_gas(&TypedTransaction::Legacy(tx.clone()), None)
+                .await?;
+            tx.gas = Some(U256::from(gas_limit));
 
-        println!("tx: {tx:?}");
+            let nonce = provider.get_transaction_count(from, None).await?;
+            tx.nonce = Some(nonce);
 
-        let sign = wallet
-            .sign_transaction(&TypedTransaction::Legacy(tx.clone()))
-            .await?;
+            println!("tx: {tx:?}");
 
-        tx.rlp_signed(&sign)
-    };
+            let sign = wallet
+                .sign_transaction(&TypedTransaction::Legacy(tx.clone()))
+                .await?;
 
-    // - send tx
-    {
-        let pending = {
-            let pending = provider.send_raw_transaction(tx_bytes).await?;
-
-            let pending = pending.retries(3);
-
-            let pending = pending.interval(Duration::from_secs(5));
-
-            pending
+            tx.rlp_signed(&sign)
         };
 
-        println!("pending: {:?}", pending);
 
-        if let Some(receipt) = pending.await? {
-            println!("tx hash: {:?}", receipt.transaction_hash);
+        // - send tx
+        {
+            let pending = {
+                let pending = provider.send_raw_transaction(tx_bytes).await?;
 
-            if let Some(code) = receipt.status {
-                println!("get receipt status: [{}]", code.as_u64());
+                let pending = pending.retries(3);
+
+                let pending = pending.interval(Duration::from_secs(5));
+
+                pending
+            };
+
+            println!("pending: {:?}", pending);
+
+            if let Some(receipt) = pending.await? {
+                println!("tx hash: {:?}", receipt.transaction_hash);
+
+                if let Some(code) = receipt.status {
+                    println!("get receipt status: [{}]", code.as_u64());
+                } else {
+                    println!("get receipt status is null, receipt: [{receipt:?}]");
+                }
+
+                println!("receipt: {:?}", receipt);
             } else {
-                println!("get receipt status is null, receipt: [{receipt:?}]");
-            }
-
-            println!("receipt: {:?}", receipt);
-        } else {
-            println!("get receipt is null");
-        };
+                println!("get receipt is null");
+            };
+        }
     }
 
     Ok(())
